@@ -105,11 +105,15 @@ uint8_t I2SClass::begin(i2s_mode_t mode, uint32_t sampleRate, uint8_t bitsPerSam
     }
 
     if (bitsPerSample == 16) {
-        handle.Init.DataFormat = I2S_DATAFORMAT_16B;
+        //handle.Init.DataFormat = I2S_DATAFORMAT_16B;
+        handle.Init.DataFormat = I2S_DATAFORMAT_16B_EXTENDED;
+        dmaSendSize = DMASENDSIZE;
     } else if (bitsPerSample == 24) {
         handle.Init.DataFormat = I2S_DATAFORMAT_24B;
+        dmaSendSize = DMASENDSIZE/2;
     } else if (bitsPerSample == 32) {
         handle.Init.DataFormat = I2S_DATAFORMAT_32B;
+        dmaSendSize = DMASENDSIZE/2;
     } else {
         return false;
     }
@@ -124,11 +128,14 @@ uint8_t I2SClass::begin(i2s_mode_t mode, uint32_t sampleRate, uint8_t bitsPerSam
     dmaHandle.Init.Direction = DMA_MEMORY_TO_PERIPH;
     dmaHandle.Init.PeriphInc = DMA_PINC_DISABLE;
     dmaHandle.Init.MemInc = DMA_MINC_ENABLE;
+    //dmaHandle.Init.MemInc = DMA_MINC_DISABLE;
     dmaHandle.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
     dmaHandle.Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
     dmaHandle.Init.Mode = DMA_NORMAL;
+    //dmaHandle.Init.Mode = DMA_CIRCULAR;
     dmaHandle.Init.Priority = DMA_PRIORITY_LOW;
-    dmaHandle.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    //dmaHandle.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    dmaHandle.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
     HAL_DMA_Init(&dmaHandle);
 
     __HAL_LINKDMA(&handle,hdmatx,dmaHandle);
@@ -136,14 +143,37 @@ uint8_t I2SClass::begin(i2s_mode_t mode, uint32_t sampleRate, uint8_t bitsPerSam
     return HAL_I2S_Init(&handle) == HAL_OK;
 }
 
+uint8_t I2SClass::setsample(uint32_t sampleRate) {
+    
+    if (sampleRate >= 96000) {
+        handle.Init.AudioFreq = I2S_AUDIOFREQ_96K;
+    } else if (sampleRate >= 48000) {
+        handle.Init.AudioFreq = I2S_AUDIOFREQ_48K;
+    } else if (sampleRate >= 44000) {
+        handle.Init.AudioFreq = I2S_AUDIOFREQ_44K;
+    } else if (sampleRate >= 32000) {
+        handle.Init.AudioFreq = I2S_AUDIOFREQ_32K;
+    } else if (sampleRate >= 22000) {
+        handle.Init.AudioFreq = I2S_AUDIOFREQ_22K;
+    } else if (sampleRate >= 16000) {
+        handle.Init.AudioFreq = I2S_AUDIOFREQ_16K;
+    } else if (sampleRate >= 11000) {
+        handle.Init.AudioFreq = I2S_AUDIOFREQ_11K;
+    } else {
+        handle.Init.AudioFreq = I2S_AUDIOFREQ_8K;
+    }
+    return HAL_I2S_Init(&handle) == HAL_OK;
+}
+
+
 I2SClass *i2sDma;
 
 extern "C" void HAL_I2S_TxCpltCallback(I2S_HandleTypeDef *hi2s) {
     i2sDma->tail += i2sDma->dmaSendSize;
 
     if ((uint32_t)(i2sDma->head - i2sDma->tail) > i2sDma->dmaSendSize) {
-        HAL_I2S_Transmit_DMA(hi2s, (uint16_t*)(i2sDma->doubleBuffer + (i2sDma->tail % i2sDma->bufferSize)), i2sDma->dmaSendSize);
-    } else {
+       HAL_I2S_Transmit_DMA(hi2s, (uint16_t*)(i2sDma->doubleBuffer + (i2sDma->tail % i2sDma->bufferSize)), i2sDma->dmaSendSize/2);
+     } else {
         i2sDma->dmaDone = true;
     }
 
@@ -154,13 +184,12 @@ void I2SClass::write(int16_t data) {
 
     doubleBuffer[head % bufferSize] = data;
     head++;
-
-    if (dmaDone && (uint32_t)(head - tail) > dmaSendSize) {
+    
+    if ((dmaDone && (uint32_t)(head - tail) > dmaSendSize)) {
         i2sDma = this;
         dmaDone = false;
-        HAL_I2S_Transmit_DMA(&handle, (uint16_t*)(doubleBuffer + (tail % bufferSize)), dmaSendSize);
+        HAL_I2S_Transmit_DMA(&handle, (uint16_t*)(doubleBuffer + (tail % bufferSize)), dmaSendSize/2);
     }
-
 }
 
 void I2SClass::write(int16_t *data, size_t samples) {

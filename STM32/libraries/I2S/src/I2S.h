@@ -2,6 +2,7 @@
 #define _I2S_H
 
 #include "stm32_def.h"
+#define DMASENDSIZE 512
 
 typedef enum {
   I2S_PHILIPS_MODE,
@@ -18,7 +19,9 @@ class I2SClass {
     I2SClass(SPI_TypeDef *instance, uint8_t sd, uint8_t ws, uint8_t ck, uint8_t mck);
 
     uint8_t begin(i2s_mode_t mode, uint32_t sampleRate, uint8_t bitsPerSample);
-
+    
+    uint8_t setsample(uint32_t sampleRate);
+    
     void setBuffer(int16_t *buffer, int bufferSize);
 
     int getBufferSize();
