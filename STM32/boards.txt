@@ -840,5 +840,36 @@ BORG_F765.menu.serial.SerialUSB.build.extra_flags_serial=-DMENU_SERIAL=SerialUSB
 BORG_F765.menu.serial.SerialUART1=SerialUART1
 BORG_F765.menu.serial.SerialUART1.build.extra_flags_serial=-DMENU_SERIAL=SerialUART1
 
+################################################################################
+# ARM-First_F405 board
+
+ARM-First_F405.name=Arm-First_F405
+
+ARM-First_F405.upload.maximum_size=1048576
+ARM-First_F405.upload.maximum_data_size=131072
+
+ARM-First_F405.build.core=arduino
+ARM-First_F405.build.board=DISCO_F407VG
+
+ARM-First_F405.build.mcu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard
+ARM-First_F405.build.series=STM32F4
+ARM-First_F405.build.variant=ARM-First_F405
+ARM-First_F405.build.extra_flags=-DSTM32F407VG -DHSE_VALUE=12000000
+ARM-First_F405.build.f_cpu=168000000L
+
+ARM-First_F405.upload.protocol=STLink
+ARM-First_F405.upload.tool=stlink_upload
+
+ARM-First_F405.menu.usb.SerialUSB=Serial [Virtual COM port]
+ARM-First_F405.menu.usb.SerialUSB.build.extra_flags_usb=-DMENU_USB_SERIAL
+ARM-First_F405.menu.usb.SerialMSC=Mass storage [testing, see documentation]
+ARM-First_F405.menu.usb.SerialMSC.build.extra_flags_usb=-DMENU_USB_MASS_STORAGE
+ARM-First_F405.menu.usb.Disabled=Disabled, no USB
+
+ARM-First_F405.menu.serial.SerialUSB=SerialUSB
+ARM-First_F405.menu.serial.SerialUSB.build.extra_flags_serial=-DMENU_SERIAL=SerialUSB
+ARM-First_F405.menu.serial.SerialUART2=SerialUART2 [PA2/PA3]
+ARM-First_F405.menu.serial.SerialUART2.build.extra_flags_serial=-DMENU_SERIAL=SerialUART2
+
 
 ################################################################################
