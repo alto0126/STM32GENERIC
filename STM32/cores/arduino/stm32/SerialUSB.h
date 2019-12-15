@@ -37,6 +37,7 @@
 #include "Stream.h"
 #include <Arduino.h>
 
+
 //================================================================================
 //	Serial over CDC (Serial1 is the physical port)
 //================================================================================
@@ -48,7 +49,7 @@ class SerialUSBClass : public Stream{
     void begin(uint32_t baud_count, uint8_t config);
     void end(void);
 
-    virtual int available(void);
+    virtual int available();
     virtual int availableForWrite(void);
     //virtual void accept(void);
     virtual int peek(void);

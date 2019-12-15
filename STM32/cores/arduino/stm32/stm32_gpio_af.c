@@ -78,6 +78,15 @@ void stm32AfUARTInit(const USART_TypeDef *instance,
 
 }
 
+void stm32AfRTSInit(const USART_TypeDef *instance,GPIO_TypeDef *rtsPort, uint32_t rtsPin) {
+    //stm32AfInit(chip_af_usart_rts, sizeof(chip_af_usart_rts) / sizeof(chip_af_usart_rts[0]), instance, rtsPort, rtsPin, GPIO_MODE_AF_PP, GPIO_NOPULL);
+    stm32AfInit(chip_af_usart_rts, 1, instance, GPIOA,  GPIO_PIN_1, GPIO_MODE_AF_PP, GPIO_NOPULL);
+}
+
+void stm32AfCTSInit(const USART_TypeDef *instance,GPIO_TypeDef *ctsPort, uint32_t ctsPin) {
+    stm32AfInit(chip_af_usart_cts, sizeof(chip_af_usart_cts) / sizeof(chip_af_usart_cts[0]), instance, ctsPort, ctsPin, GPIO_MODE_AF_PP, GPIO_NOPULL);
+}
+
 void stm32AfSPIInit(const SPI_TypeDef *instance,
     GPIO_TypeDef *mosiPort, uint32_t mosiPin,
     GPIO_TypeDef *misoPort, uint32_t misoPin,

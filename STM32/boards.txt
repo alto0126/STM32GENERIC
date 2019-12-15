@@ -849,12 +849,12 @@ ARM-First_F405.upload.maximum_size=1048576
 ARM-First_F405.upload.maximum_data_size=131072
 
 ARM-First_F405.build.core=arduino
-ARM-First_F405.build.board=DISCO_F407VG
+ARM-First_F405.build.board=DISCO_F405RG
 
 ARM-First_F405.build.mcu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 ARM-First_F405.build.series=STM32F4
 ARM-First_F405.build.variant=ARM-First_F405
-ARM-First_F405.build.extra_flags=-DSTM32F407VG -DHSE_VALUE=12000000
+ARM-First_F405.build.extra_flags=-DSTM32F405RG -DHSE_VALUE=12000000
 ARM-First_F405.build.f_cpu=168000000L
 
 ARM-First_F405.upload.protocol=STLink
@@ -870,6 +870,15 @@ ARM-First_F405.menu.serial.SerialUSB=SerialUSB
 ARM-First_F405.menu.serial.SerialUSB.build.extra_flags_serial=-DMENU_SERIAL=SerialUSB
 ARM-First_F405.menu.serial.SerialUART2=SerialUART2 [PA2/PA3]
 ARM-First_F405.menu.serial.SerialUART2.build.extra_flags_serial=-DMENU_SERIAL=SerialUART2
+
+ARM-First_F405.menu.upload_method.dfuMethod=STM32CubeProgrammer (DFU)
+ARM-First_F405.menu.upload_method.dfuMethod.upload.protocol=2
+ARM-First_F405.menu.upload_method.dfuMethod.upload.options=-g
+ARM-First_F405.menu.upload_method.dfuMethod.upload.tool=stm32CubeProg
+
+ARM-First_F405.menu.upload_method.STLinkMethod=STLink
+ARM-First_F405.menu.upload_method.STLinkMethod.upload.protocol=STLink
+ARM-First_F405.menu.upload_method.STLinkMethod.upload.tool=stlink_upload
 
 
 ################################################################################

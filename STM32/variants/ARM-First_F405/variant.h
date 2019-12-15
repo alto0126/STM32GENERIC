@@ -10,16 +10,16 @@
 #define LED_RED_OTG_OVERCURRENT     LED_RED // be careful with this led. When using it configure the output as PULL_UP.
 
 //On-board user button
-#define USER_BTN                    PC13  // 2
+//#define USER_BTN                    PC13  // 2
 
 
-// Connected to on board LIS3DSH accelerometer, CS: PE3
+// Connected to on board SPI1
 #define MOSI                        PA7
 #define MISO                        PA6
 #define SCK                         PA5
 #define SS                          PA4
 
-// Connected to on board CS43L22 audio
+// Connected to on board I2C
 #define SDA                         PB7
 #define SCL                         PB6
 

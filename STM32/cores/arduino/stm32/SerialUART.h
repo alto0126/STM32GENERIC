@@ -27,14 +27,16 @@
 #include "stm32_gpio.h"
 #include "Stream.h"
 
-#define BUFFER_SIZE 128
+#define BUFFER_SIZE 8192
 
 class SerialUART : public Stream  {
   public:
     SerialUART(USART_TypeDef *instance);
-    void begin(const uint32_t baud);
+    void begin(const uint32_t baud, uint8_t flow = 0);
     void end(void);
     int available(void);
+    int rxbufferhalf(void);
+    int availableForWrite(void);
     int peek(void);
     int read(void);
     void flush(void);
@@ -51,12 +53,13 @@ class SerialUART : public Stream  {
     uint8_t receive_buffer = 0;
 
     uint8_t *txBuffer = NULL;
-    volatile uint8_t txStart = 0;
-    volatile uint8_t txEnd = 0;
+    volatile uint32_t txStart = 0;
+    volatile uint32_t txEnd = 0;
 
     uint8_t *rxBuffer = NULL;
-    volatile uint8_t rxStart = 0;
-    volatile uint8_t rxEnd = 0;
+    volatile uint32_t rxStart = 0;
+    volatile uint32_t rxEnd = 0;
+    volatile uint8_t flow_rts = 0;
 
     GPIO_TypeDef *rxPort = NULL;
     uint32_t rxPin = 0;

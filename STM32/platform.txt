@@ -31,9 +31,9 @@ compiler.extra_flags=-mcpu={build.mcu} -DF_CPU={build.f_cpu} -mthumb -DSTM32GENE
 
 compiler.S.flags={compiler.extra_flags} -c -g -x assembler-with-cpp
 
-compiler.c.flags={compiler.extra_flags} -c -g -MMD -Os {compiler.warning_flags} -std=gnu11 -ffunction-sections -fdata-sections -nostdlib --param max-inline-insns-single=500 -Dprintf=iprintf -MMD
+compiler.c.flags={compiler.extra_flags} -c -g -MMD -O2 {compiler.warning_flags} -std=gnu11 -ffunction-sections -fdata-sections -nostdlib --param max-inline-insns-single=500 -Dprintf=iprintf -MMD
 
-compiler.cpp.flags={compiler.extra_flags} -c -g -Os {compiler.warning_flags} -std=gnu++11 -ffunction-sections -fdata-sections -nostdlib -fno-threadsafe-statics --param max-inline-insns-single=500 -fno-rtti -fno-exceptions -Dprintf=iprintf -MMD
+compiler.cpp.flags={compiler.extra_flags} -c -g -O2 {compiler.warning_flags} -std=gnu++11 -ffunction-sections -fdata-sections -nostdlib -fno-threadsafe-statics --param max-inline-insns-single=500 -fno-rtti -fno-exceptions -Dprintf=iprintf -MMD
 
 compiler.ar.flags=rcs
 
@@ -145,6 +145,17 @@ tools.maple_upload.path.linux64={runtime.hardware.path}/tools/linux64
 tools.maple_upload.upload.params.verbose=-d
 tools.maple_upload.upload.params.quiet=
 tools.maple_upload.upload.pattern="{path}/{cmd}" {serial.port.file} {upload.altID} {upload.usbID} "{build.path}/{build.project_name}.bin"
+
+# STM32CubeProgrammer upload
+tools.stm32CubeProg.cmd=stm32CubeProg.sh
+tools.stm32CubeProg.cmd.macosx=stm32CubeProg
+tools.stm32CubeProg.cmd.windows=stm32CubeProg.bat
+tools.stm32CubeProg.path.linux={runtime.hardware.path}/tools/linux
+tools.stm32CubeProg.path.macosx={runtime.hardware.path}/tools/macosx
+tools.stm32CubeProg.path.windows={runtime.hardware.path}/tools/win
+tools.stm32CubeProg.upload.params.verbose=
+tools.stm32CubeProg.upload.params.quiet=
+tools.stm32CubeProg.upload.pattern="{path}/{cmd}" {upload.protocol} "{build.path}/{build.project_name}.bin" {upload.options}
 
 #Added tool for generic STM32 upload via serial to Serial Port 1 (pins PA9 and PA10) - note. Boot0 line needs to high on board reset to enable upload via serial
 # at the end up the upload the program is automatically run, without the board being reset

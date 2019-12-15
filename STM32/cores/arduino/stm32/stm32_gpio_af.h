@@ -94,6 +94,10 @@ void stm32AfUARTInit(const USART_TypeDef *instance,
     GPIO_TypeDef *rxPort, uint32_t rxPin, 
     GPIO_TypeDef *txPort, uint32_t txPin);
 
+void stm32AfRTSInit(const USART_TypeDef *instance,GPIO_TypeDef *rtsPort, uint32_t rtsPin);
+
+void stm32AfCTSInit(const USART_TypeDef *instance,GPIO_TypeDef *ctsPort, uint32_t ctsPin);
+
 void stm32AfSPIInit(const SPI_TypeDef *instance,
     GPIO_TypeDef *mosiPort, uint32_t mosiPin,
     GPIO_TypeDef *misoPort, uint32_t misoPin,

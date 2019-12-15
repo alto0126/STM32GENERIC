@@ -875,8 +875,10 @@ HAL_StatusTypeDef HAL_I2S_Transmit_DMA(I2S_HandleTypeDef *hi2s, uint16_t *pData,
     tmp1 = hi2s->Instance->I2SCFGR & (SPI_I2SCFGR_DATLEN | SPI_I2SCFGR_CHLEN);
     if((tmp1 == I2S_DATAFORMAT_24B) || (tmp1 == I2S_DATAFORMAT_32B))
     {
-      hi2s->TxXferSize  = (Size << 1U);
-      hi2s->TxXferCount = (Size << 1U);
+      hi2s->TxXferSize  = Size*2;
+      hi2s->TxXferCount = Size*2;
+      //hi2s->TxXferSize  = Size;
+      //hi2s->TxXferCount = Size;
     }
     else
     {

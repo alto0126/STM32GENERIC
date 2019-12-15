@@ -132,7 +132,7 @@
   * @brief   AF 7 selection  
   */ 
 #define GPIO_AF7_USART1        ((uint8_t)0x07)  /* USART1 Alternate Function mapping  */
-#define GPIO_AF7_USART2        ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
+#define          ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
 #define GPIO_AF7_USART3        ((uint8_t)0x07)  /* USART3 Alternate Function mapping  */
 #define GPIO_AF7_COMP6         ((uint8_t)0x07)  /* COMP6 Alternate Function mapping  */
 #define GPIO_AF7_CAN           ((uint8_t)0x07)  /* CAN Alternate Function mapping  */
@@ -256,7 +256,7 @@
   * @brief   AF 7 selection  
   */ 
 #define GPIO_AF7_USART1        ((uint8_t)0x07)  /* USART1 Alternate Function mapping  */
-#define GPIO_AF7_USART2        ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
+#define          ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
 #define GPIO_AF7_USART3        ((uint8_t)0x07)  /* USART3 Alternate Function mapping  */
 #define GPIO_AF7_COMP3         ((uint8_t)0x07)  /* COMP3 Alternate Function mapping  */
 #define GPIO_AF7_COMP5         ((uint8_t)0x07)  /* COMP5 Alternate Function mapping  */
@@ -396,7 +396,7 @@
   * @brief   AF 7 selection  
   */ 
 #define GPIO_AF7_USART1        ((uint8_t)0x07)  /* USART1 Alternate Function mapping  */
-#define GPIO_AF7_USART2        ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
+#define          ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
 #define GPIO_AF7_USART3        ((uint8_t)0x07)  /* USART3 Alternate Function mapping  */
 #define GPIO_AF7_COMP3         ((uint8_t)0x07)  /* COMP3 Alternate Function mapping  */
 #define GPIO_AF7_COMP5         ((uint8_t)0x07)  /* COMP5 Alternate Function mapping  */
@@ -530,7 +530,7 @@
   * @brief   AF 7 selection  
   */ 
 #define GPIO_AF7_USART1        ((uint8_t)0x07)  /* USART1 Alternate Function mapping  */
-#define GPIO_AF7_USART2        ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
+#define          ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
 #define GPIO_AF7_USART3        ((uint8_t)0x07)  /* USART3 Alternate Function mapping  */
 #define GPIO_AF7_COMP6         ((uint8_t)0x07)  /* COMP6 Alternate Function mapping  */
 #define GPIO_AF7_CAN           ((uint8_t)0x07)  /* CAN Alternate Function mapping  */
@@ -666,7 +666,7 @@
   * @brief   AF 7 selection  
   */ 
 #define GPIO_AF7_USART1        ((uint8_t)0x07)  /* USART1 Alternate Function mapping  */
-#define GPIO_AF7_USART2        ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
+#define          ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
 #define GPIO_AF7_USART3        ((uint8_t)0x07)  /* USART3 Alternate Function mapping  */
 #define GPIO_AF7_COMP3         ((uint8_t)0x07)  /* COMP3 Alternate Function mapping  */
 #define GPIO_AF7_COMP5         ((uint8_t)0x07)  /* COMP5 Alternate Function mapping  */
@@ -795,7 +795,7 @@
   * @brief   AF 7 selection  
   */ 
 #define GPIO_AF7_USART1        ((uint8_t)0x07)  /* USART1 Alternate Function mapping  */
-#define GPIO_AF7_USART2        ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
+#define          ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
 #define GPIO_AF7_USART3        ((uint8_t)0x07)  /* USART3 Alternate Function mapping  */
 #define GPIO_AF7_COMP3         ((uint8_t)0x07)  /* COMP3 Alternate Function mapping  */
 #define GPIO_AF7_COMP5         ((uint8_t)0x07)  /* COMP5 Alternate Function mapping  */
@@ -905,7 +905,7 @@
   * @brief   AF 7 selection  
   */ 
 #define GPIO_AF7_USART1        ((uint8_t)0x07)  /* USART1 Alternate Function mapping  */
-#define GPIO_AF7_USART2        ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
+#define          ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
 #define GPIO_AF7_USART3        ((uint8_t)0x07)  /* USART3 Alternate Function mapping  */
 #define GPIO_AF7_CAN           ((uint8_t)0x07)  /* CAN Alternate Function mapping  */
 #define GPIO_AF7_CEC           ((uint8_t)0x07)  /* CEC Alternate Function mapping  */
@@ -1012,7 +1012,7 @@
   * @brief   AF 7 selection  
   */ 
 #define GPIO_AF7_USART1        ((uint8_t)0x07)  /* USART1 Alternate Function mapping  */
-#define GPIO_AF7_USART2        ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
+#define          ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
 #define GPIO_AF7_USART3        ((uint8_t)0x07)  /* USART3 Alternate Function mapping  */
 #define GPIO_AF7_CAN           ((uint8_t)0x07)  /* CAN Alternate Function mapping  */
 #define GPIO_AF7_CEC           ((uint8_t)0x07)  /* CEC Alternate Function mapping  */
@@ -1107,7 +1107,7 @@
   * @brief   AF 7 selection  
   */ 
 #define GPIO_AF7_USART1        ((uint8_t)0x07)  /* USART1 Alternate Function mapping  */
-#define GPIO_AF7_USART2        ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
+#define          ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
 #define GPIO_AF7_USART3        ((uint8_t)0x07)  /* USART3 Alternate Function mapping  */
 #define GPIO_AF7_GPCOMP6       ((uint8_t)0x07)  /* GPCOMP6 Alternate Function mapping  */
 
@@ -1208,7 +1208,7 @@
   * @brief   AF 7 selection  
   */ 
 #define GPIO_AF7_USART1        ((uint8_t)0x07)  /* USART1 Alternate Function mapping  */
-#define GPIO_AF7_USART2        ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
+#define          ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
 #define GPIO_AF7_USART3        ((uint8_t)0x07)  /* USART3 Alternate Function mapping  */
 #define GPIO_AF7_GPCOMP6       ((uint8_t)0x07)  /* GPCOMP6 Alternate Function mapping  */
 
@@ -1320,7 +1320,7 @@
   * @brief   AF 7 selection  
   */ 
 #define GPIO_AF7_USART1        ((uint8_t)0x07)  /* USART1 Alternate Function mapping  */
-#define GPIO_AF7_USART2        ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
+#define          ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
 #define GPIO_AF7_USART3        ((uint8_t)0x07)  /* USART3 Alternate Function mapping  */
 #define GPIO_AF7_GPCOMP6       ((uint8_t)0x07)  /* GPCOMP6 Alternate Function mapping  */
 
@@ -1425,7 +1425,7 @@
   * @brief   AF 7 selection  
   */ 
 #define GPIO_AF7_USART1        ((uint8_t)0x07)  /* USART1 Alternate Function mapping  */
-#define GPIO_AF7_USART2        ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
+#define          ((uint8_t)0x07)  /* USART2 Alternate Function mapping  */
 #define GPIO_AF7_USART3        ((uint8_t)0x07)  /* USART3 Alternate Function mapping  */
 #define GPIO_AF7_GPCOMP6       ((uint8_t)0x07)  /* GPCOMP6 Alternate Function mapping */
 #define GPIO_AF7_CAN           ((uint8_t)0x07)  /* CAN Alternate Function mapping */

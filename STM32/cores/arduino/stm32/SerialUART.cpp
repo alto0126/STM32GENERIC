@@ -46,7 +46,7 @@ SerialUART::SerialUART(USART_TypeDef *instance) {
  * - use statically allocated memory for the first, and malloc() for any subsequent calls to begin() on DIFFERENT SerialUARTs.
  */
 
-void SerialUART::begin(const uint32_t baud) {
+void SerialUART::begin(const uint32_t baud, uint8_t flow) {
   if (txBuffer == NULL) {
 	static uint8_t tx[BUFFER_SIZE];
 	static uint8_t static_tx_used = 0;
@@ -154,8 +154,25 @@ void SerialUART::begin(const uint32_t baud) {
   handle->Init.StopBits = UART_STOPBITS_1; 
   handle->Init.Parity = UART_PARITY_NONE; 
   handle->Init.Mode = UART_MODE_TX_RX; 
-  handle->Init.HwFlowCtl = UART_HWCONTROL_NONE; 
-  handle->Init.OverSampling = UART_OVERSAMPLING_16; 
+  handle->Init.OverSampling = UART_OVERSAMPLING_16;
+  if(flow == 0){
+    handle->Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  }
+  if(flow == 1){
+    handle->Init.HwFlowCtl = UART_HWCONTROL_RTS;
+    //stm32AfRTSInit(instance, variant_pin_list[PA1].port, variant_pin_list[PA1].pin_mask);
+ 
+  }
+  if(flow == 2){
+    handle->Init.HwFlowCtl = UART_HWCONTROL_CTS;
+    //stm32AfCTSInit(instance, variant_pin_list[PA0].port, variant_pin_list[PA0].pin_mask);
+ 
+  }
+  if(flow == 3){
+      handle->Init.HwFlowCtl = UART_HWCONTROL_RTS_CTS;
+      //stm32AfRTSInit(instance, variant_pin_list[PA1].port, variant_pin_list[PA1].pin_mask);
+      //stm32AfCTSInit(instance, variant_pin_list[PA0].port, variant_pin_list[PA0].pin_mask);
+  }
   HAL_UART_Init(handle);
 
   HAL_UART_Receive_IT(handle, &receive_buffer, 1);
@@ -172,8 +189,17 @@ void SerialUART::begin(const uint32_t baud) {
 }
 
 int SerialUART::available() {
-    return rxEnd != rxStart;
+    return rxEnd % BUFFER_SIZE != rxStart % BUFFER_SIZE;
 }
+
+int SerialUART::rxbufferhalf(){
+    return rxEnd - rxStart;
+}
+
+int SerialUART::availableForWrite() {
+    return (BUFFER_SIZE + txStart - txEnd) % BUFFER_SIZE;
+}
+
 int SerialUART::peek() {
     if (available()) {
     return rxBuffer[rxStart % BUFFER_SIZE];
@@ -185,15 +211,27 @@ int SerialUART::peek() {
 void SerialUART::flush() {
     
     while(txEnd % BUFFER_SIZE != txStart % BUFFER_SIZE);
-}
+ }
 
 int SerialUART::read() {
   if (available()) {
+    if(flow_rts){
+        HAL_UART_Receive_IT(handle, &receive_buffer, 1);
+        flow_rts = 0;
+    }
     return rxBuffer[rxStart++ % BUFFER_SIZE];
   } else {
     return -1;
   }
 }
+
+/*int SerialUART::read() {
+  if (available()) {
+    return rxBuffer[rxStart++ % BUFFER_SIZE];
+  } else {
+    return -1;
+  }
+}*/
 
 size_t SerialUART::write(const uint8_t c) {
   while((txEnd + 1) % BUFFER_SIZE == txStart % BUFFER_SIZE);
@@ -293,6 +331,10 @@ extern "C" void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
 extern "C" void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
   interruptUART->rxBuffer[interruptUART->rxEnd % BUFFER_SIZE] = interruptUART->receive_buffer;
   interruptUART->rxEnd++;
-  HAL_UART_Receive_IT(interruptUART->handle, &interruptUART->receive_buffer, 1);
+  if((interruptUART->rxEnd + 2) % BUFFER_SIZE != interruptUART->rxStart % BUFFER_SIZE){
+    HAL_UART_Receive_IT(interruptUART->handle, &interruptUART->receive_buffer, 1);
+  }else{
+    interruptUART->flow_rts = 1;
+  }
 }
 
