@@ -1,6 +1,6 @@
 /***********************************************************************/
 /*                                                                     */
-/*  FILE        :Arm_First_Test.c                                                */
+/*  FILE        :Arm_First_Test_lcd.c                                                */
 /*  DATE        :2019/5/18                                              */
 /*  DESCRIPTION :Arm-First DEMO PROGRAM                                  */
 /*  CPU TYPE    :STM32F405                                              */
@@ -15,7 +15,7 @@
 #define MINIMP3_ONLY_MP3
 #define MINIMP3_NO_SIMD
 #define MINIMP3_IMPLEMENTATION
-#define MINIMP3_MAX_SAMPLES_PER_FRAME 1152*2
+//#define MINIMP3_MAX_SAMPLES_PER_FRAME 1152*2
 #define RECORDING_PERIOD  3000    /* xPCM_BUFF_PERIOD ms */
 #define WAV_HEADER_SIZE   44
 
@@ -104,31 +104,8 @@ void menu(void){
       lcdprint("Gyroscope");
       Serial.println("ボードを傾けると値が変化します");
       exfunc1(gyro_calc);break;
-    case '4': Serial.println("ボイスレコーダ");
-      lcdprint("Voice recorder");
-      Serial.print("Mic1/2..1 Mic3/4..2?:");
-      lcdprint("Voice recorder");
-      lcdprint("Mic12:d Mic34:u");
-      while(!Serial.available() & !(num = keyin())); //キー入力のチェック
-      lcd.setCursor(13, 10);
-      if(Serial.available()){
-        num = Serial.read();            //指示を読み出し
-      }
-      switch(num){
-        case 'd':
-          lcd.print("1");
-          num = '1';
-          break;
-        case 'u':
-          lcd.print("2");
-          num = '2';          
-      }
-      Serial.write(num);
-      if(num == '1'){
-        recording(CH_SETTING_M1M2);
-      }else if(num == '2'){
-        recording(CH_SETTING_M3M4);
-      }
+    case '4':
+      recording();
       break;
     case '5': Serial.println("サイン波出力");
       lcdprint("Sine wave");
@@ -284,28 +261,26 @@ void wave(){
   double amplitude = 30000;
   char buf[8];
   int16_t buff[4410*2];
-  
+
+  codec_reg_setup();        //DACの初期化 
   I2S.setsample(44100);
   codec_reg_setup();
-  while(1){
-    Serial.print("Frequency:");
-    getstr(buf);
-    frequency = (double)atoi(buf);
-    if(frequency == 0) break;
-    for (int n = 0; n < 4410*2; n++) {
-        buff[n] = (sin(2 * PI * frequency * n / 44100)) * amplitude;
-    }
-    while(1){
-      for (int n = 0; n < 4410*2; n++) {
-        I2S.write(buff[n]);   //left MSB
-        I2S.write(0);         //left LSB
-        I2S.write(buff[n]);   //right MSB
-        I2S.write(0);         //right LSB
-      }
-      if(Serial.available()) break;
-    }
-    Serial.read();
+  Serial.print("Frequency:880Hz");
+  lcdprint("Frequency:880Hz");
+  frequency = 880;
+  for (int n = 0; n < 4410*2; n++) {
+      buff[n] = (sin(2 * PI * frequency * n / 44100)) * amplitude;
   }
+  while(1){
+    for (int n = 0; n < 4410*2; n++) {
+      I2S.write(buff[n]);   //left MSB
+      I2S.write(0);         //left LSB
+      I2S.write(buff[n]);   //right MSB
+      I2S.write(0);         //right LSB
+    }
+    if(Serial.available()|| keyin()) break;
+  }
+  Serial.read();
 }
 
 /* 文字検索　*/
@@ -325,19 +300,21 @@ void volume(int num){
 
   if(num == 'u') {      //音量UP
     delay(100);
-    codec_writeReg(0x06, 0x200 | (vol += 10));//左音量設定　+2.5dB
-    codec_writeReg(0x07, 0x200 | vol);        //右音量設定
-    Serial.println(vol);                      //設定値表示
+    vol = codec_readReg(0x06);
+    codec_writeReg(0x06, 0x200 | (vol + 10));//左音量設定　+2.5dB
+    codec_writeReg(0x07, 0x200 | (vol + 10));//右音量設定
+    Serial.println(codec_readReg(0x06));     //設定値読出し
     lcd.setCursor(13, 1);
-    lcd.print(vol);
+    lcd.print(codec_readReg(0x06));
   }
   if(num == 'd') {//音量Down
     delay(100);
-    codec_writeReg(0x06, 0x200 | (vol -= 10));//左音量設定　-2.5dB
-    codec_writeReg(0x07, 0x200 | vol);        //右音量設定
-    Serial.println(vol);                      //設定値表示
+    vol = codec_readReg(0x06);
+    codec_writeReg(0x06, 0x200 | (vol - 10));//左音量設定　-2.5dB
+    codec_writeReg(0x07, 0x200 | (vol - 10));//右音量設定
+    Serial.println(codec_readReg(0x06));     //設定値読出し
     lcd.setCursor(13, 1);
-    lcd.print(vol);
+    lcd.print(codec_readReg(0x06));
   }
 }
 
@@ -423,7 +400,7 @@ void music_play(){
                 I2S.write(d);
                 if(btr192) h++;
             }
-            if(Serial.available() | (num = keyin())){ //キー入力のチェック
+            if(Serial.available() || (num = keyin())){ //キー入力のチェック
                 if(Serial.available()){
                   num = Serial.read();            //指示を読み出し
                 }
@@ -521,7 +498,7 @@ void mp3music_play(){
         d_on = 0;
         Serial.print(">");
       }
-      if(Serial.available() | (num = keyin())){ //キー入力のチェック
+      if(Serial.available() || (num = keyin())){ //キー入力のチェック
         if(Serial.available()){
           num = Serial.read();            //指示を読み出し
         }
@@ -569,7 +546,6 @@ void netradio(){
     {"ice1.somafm.com","/illstreet-128-mp3",80},
     {"ice1.somafm.com","/secretagent-128-mp3",80},
     {"ice1.somafm.com","/bootliquor-128-mp3",80},
-    {"tokyofmworld.leanstream.co","/JOAUFM-MP3",80},
   };
 
   Serial.begin(115200);
@@ -584,7 +560,7 @@ void netradio(){
   Serial.println("終了(e:終了)");
   Serial.println("++++++++++++++++++++++++");
   
-  for(int num = 0;num < 8; num++){
+  for(int num = 0;num < 7; num++){
     initWiFi();                 //WiFi初期化
     Serial.println("Site:" + urllist[num].host + urllist[num].file);
     lcdprint(urllist[num].file);
@@ -598,8 +574,7 @@ void netradio(){
     Serial2.println(str);
     Serial.print(">");
     //ラジオ音声データバッファリング：8192×3Byte
-    Serial2.readBytes(uartbuf,8192*3);
-    wp = 8192*3;
+    wp = Serial2.readBytes(uartbuf,8192*3);
     rp = 0;
     while(1){
       if((quant = Serial2.rxbufferhalf()) > 4096){ //UART受信バッファが4096byte以上ならリングバッファに書き込む
@@ -628,7 +603,7 @@ void netradio(){
         //Serial.printf("Sample Rate:%dHz\n", info.hz);
         //Serial.printf("Bit rate:%dkbps\n", info.bitrate_kbps);
       }
-      if(Serial.available() | (comm = keyin())){ //キー入力のチェック
+      if(Serial.available() || (comm = keyin())){ //キー入力のチェック
         if(Serial.available()){
           comm = Serial.read();            //指示を読み出し
         }
@@ -695,9 +670,7 @@ void clockcount(){
   lcd.print(str);  
 }
 
-#if 1
-/* ボイスレコーダ　*/
-void recording(uint8_t ch_setting){
+void recording(void){
   uint8_t wav_header[WAV_HEADER_SIZE] = {
   0x52, 0x49, 0x46, 0x46, /* RIFF */
   0x00, 0x00, 0x00, 0x00, /* ファイルサイズ - 8 */
@@ -715,32 +688,31 @@ void recording(uint8_t ch_setting){
   uint32_t rec_period_cnt;
   uint32_t wav_buff_cnt;
   uint8_t end_req;
-  int16_t pcm_buff[PCM_BUFF_PERIOD*AUDIO_ST_BUFF_LEN];  /* 200*48000/1000*1*2 = 19200 */
+  int16_t pcm_buff[PCM_BUFF_LEN];
+  int comm;
 
-  //digitalWrite(PA15, LOW);  // turn the YELLOW LED off
   digitalWrite(PB4, LOW);   // turn the BLUE LED off
   SdFatSdio sd;
   codec_writeReg(0x02, 0x00);
   if(!sd.begin())
   {
     Serial.println("SDカードを認識できません。");
+    lcdprint("No SD CARD     ");
     return;
   }
 
   File file;
   setpcmbuf(pcm_buff);
-  if(ch_setting == CH_SETTING_M1M2){
-    file = sd.open("/wav/rec_m1m2.wav", (O_WRITE | O_CREAT | O_TRUNC));
-  }
-  else{
-    file = sd.open("/wav/rec_m3m4.wav", (O_WRITE | O_CREAT | O_TRUNC));
-  }
+  file = sd.open("/wav/rec_m1m2.wav", (O_WRITE | O_CREAT | O_TRUNC));
   if(file){
     Serial.println("'e'押下もしくは10分間の録音で終了します。");
+    lcd.setCursor(0, 0);
+    lcdprint("Start Record");
+    lcdprint("Stop -> SEL");
 
     file.write(wav_header, WAV_HEADER_SIZE);
 
-    StartAudioProcess(ch_setting);
+    StartAudioProcess();
 
     total_wr_size = 0;
     rec_period_cnt = 0;
@@ -748,23 +720,26 @@ void recording(uint8_t ch_setting){
     end_req = 0;
 
     while((rec_period_cnt < RECORDING_PERIOD) && (end_req == 0)){
-      if(Serial.available()){
-        if(Serial.read() == 'e'){
+      if(Serial.available()|| (comm = keyin())){
+        if(Serial.available()){
+          comm = Serial.read();            //指示を読み出し
+        }
+        Serial.printf("%c:", comm);
+        if(comm == 'e'){
           end_req = 1;
         }
       }
-      if(keyin() == 'e') end_req = 1;
       if(pcm_buff_state == PCM_BUFF_STATE_HALFCPLT){
-        //digitalWrite(PA15, HIGH); // turn the YELLOW LED on
         digitalWrite(PB4, LOW);   // turn the BLUE LED off
-
+        lcd.setCursor(14, 0);
+        lcd.print(" *");
         file.write(&pcm_buff[0], (PCM_BUFF_PERIOD/2*AUDIO_ST_BUFF_LEN)*2);
         pcm_buff_state = PCM_BUFF_STATE_NOTCPLT;
       }
       else if(pcm_buff_state == PCM_BUFF_STATE_CPLT){
-        //digitalWrite(PA15, LOW);  // turn the YELLOW LED off
         digitalWrite(PB4, HIGH);  // turn the BLUE LED on
-
+        lcd.setCursor(14, 0);
+        lcd.print("* ");
         file.write(&pcm_buff[PCM_BUFF_PERIOD/2*AUDIO_ST_BUFF_LEN], (PCM_BUFF_PERIOD/2*AUDIO_ST_BUFF_LEN)*2);
         pcm_buff_state = PCM_BUFF_STATE_NOTCPLT;
         rec_period_cnt++;
@@ -773,7 +748,9 @@ void recording(uint8_t ch_setting){
         ;
       }
     }
-    //digitalWrite(PA15, HIGH); // turn the YELLOW LED on
+
+    FinishAudioProcess();
+
     digitalWrite(PB4, HIGH);  // turn the BLUE LED on
 
     total_wr_size = rec_period_cnt*(PCM_BUFF_PERIOD*AUDIO_ST_BUFF_LEN)*2;
@@ -786,15 +763,12 @@ void recording(uint8_t ch_setting){
     file.close();
     Serial.printf("録音時間: %dsec\n", (rec_period_cnt*PCM_BUFF_PERIOD*AUDIO_PROCESS_PERIOD/1000));
 
-    MX_DMA_DeInit();
-    //digitalWrite(PA15, LOW); // turn the YELLOW LED off
     digitalWrite(PB4, LOW);  // turn the BLUE LED off
   }
   else{
     Serial.println("ファイルを生成できません。");
   }
 }
-#endif
 
 /* AT命令出力 */
 String atout(String data) {
@@ -862,6 +836,9 @@ void wifisetup(){
   for(int n = 0; n < 5; n++){ //初期化処理の終了待ち
      Serial.print("*");
      delay(1000);
+  }
+  while(Serial2.available()){
+    Serial2.read();
   }
   Serial.println();
   Serial2.begin(115200);
