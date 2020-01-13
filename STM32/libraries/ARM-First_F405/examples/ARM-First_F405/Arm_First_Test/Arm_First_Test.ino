@@ -44,7 +44,6 @@ void led_onoff();
 void wave();
 void music_play();
 void mp3music_play();
-void temp_calc();
 void codec_reg_setup();
 
 I2SClass I2S(SPI2, PB15 /*DIN*/ , PB9 /*LRC*/, PB13 /*SCLK*/, PC6 /*MCLK*/);
@@ -210,18 +209,19 @@ void led_onoff(){
 
 /* サイン波出力　*/
 void wave(){
+  int16_t buf[8192*2];      //DMAリングバッファ
   double frequency;
   double amplitude = 30000;
-  char buf[8];
   int16_t buff[4410*2];
+  char inbuf[8];
   
   codec_reg_setup();        //DACの初期化
   I2S.setsample(44100);
-  codec_reg_setup();
+  I2S.setBuffer(buf, 8192*2);    //DMAバッファの設定
   while(1){
     Serial.print("Frequency:");
-    getstr(buf);
-    frequency = (double)atoi(buf);
+    getstr(inbuf);
+    frequency = (double)atoi(inbuf);
     if(frequency == 0) break;
     for (int n = 0; n < 4410*2; n++) {
         buff[n] = (sin(2 * PI * frequency * n / 44100)) * amplitude;
@@ -684,22 +684,6 @@ void recording(void){
   }
 }
 
-void temp_calc(){
-  static int tmp_s = 0, measure_count = 0;
-  int tmp;
-  uint8_t buf[2];
-  
-  i2c_mem_write(0x30, 107, 0x10);
-  i2c_mem_read(2, 107, 0x20, buf);
-  tmp_s += (buf[1]*256+buf[0])/128;
-  measure_count += 1;
-  if(measure_count == 5){
-    Serial.printf("TEMP:%2d℃\n", tmp_s/5);
-    measure_count = 0;
-    tmp_s = 0;    
-  }
-}
-
 /* AT命令出力 */
 String atout(String data) {
   String resp = "";
@@ -727,13 +711,13 @@ void setRTSpin(){
 }
 
 void initWiFi(){
-    pinMode(PB1, OUTPUT);
-    digitalWrite(PB1, LOW);
+    pinMode(PB1, OUTPUT);   //RESET信号を出力設定
+    digitalWrite(PB1, LOW); //RESET信号をLow
     delay(100);
-    digitalWrite(PB1, HIGH);
-    for(int n = 0; n < 5; n++){
+    digitalWrite(PB1, HIGH);//RESET信号をHigh
+    for(int n = 0; n < 5; n++){ //初期化処理の終了待ち
        Serial.print("*");
-       delay(1000);
+      delay(1000);
     }
     Serial.println();
     Serial2.begin(115200);
@@ -758,9 +742,14 @@ void wifisetup(){
   digitalWrite(PB1, HIGH);//RESET信号をHigh
   for(int n = 0; n < 5; n++){ //初期化処理の終了待ち
      Serial.print("*");
-     delay(1000);
+    delay(1000);
   }
   Serial.println();
+  Serial2.begin(115200);
+  delay(100);
+  while(Serial2.available()){
+    Serial2.read();
+  }
   Serial2.begin(115200);
   Serial.print("SSID?:"); 
   getstr(linebuf);        //SSID入力
@@ -770,6 +759,7 @@ void wifisetup(){
   String passwd = linebuf; 
   Serial.println("Connecting!!");
   /* AT命令　アクセスポイントへの接続 */
+  Serial.println(atout("AT+CWMODE=1"));
   Serial.println(atout("AT+CWJAP_DEF=\""+ssid+"\",\""+passwd+"\""));
   Serial.print("Push Enter key:");
   getstr(linebuf);

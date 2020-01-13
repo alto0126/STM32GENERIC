@@ -257,9 +257,9 @@ void led_onoff(){
 
 /* サイン波出力　*/
 void wave(){
+  int16_t buf[8192*2];      //DMAリングバッファ
   double frequency;
   double amplitude = 30000;
-  char buf[8];
   int16_t buff[4410*2];
 
   codec_reg_setup();        //DACの初期化 
@@ -799,16 +799,16 @@ void setRTSpin(){
 
 /* WiFiの初期化 */
 void initWiFi(){
-    pinMode(PB1, OUTPUT);
-    digitalWrite(PB1, LOW);
+    pinMode(PB1, OUTPUT);   //RESET信号を出力設定
+    digitalWrite(PB1, LOW); //RESET信号をLow
     delay(100);
-    digitalWrite(PB1, HIGH);
+    digitalWrite(PB1, HIGH);//RESET信号をHigh
     lcdprint("");
     lcd.setCursor(0,1);
-    for(int n = 0; n < 5; n++){
-       Serial.print("*");
-       lcd.print("*");
-       delay(1000);
+    for(int n = 0; n < 5; n++){ //初期化処理の終了待ち
+      Serial.print("*");
+      lcd.print("*");
+      delay(1000);
     }
     Serial.println();
     Serial2.begin(115200);
@@ -827,8 +827,7 @@ void initWiFi(){
 
 /* WiFi 設定 */
 void wifisetup(){
-  char linebuf[50];
-  
+  char linebuf[50];  
   pinMode(PB1, OUTPUT);   //RESET信号を出力設定
   digitalWrite(PB1, LOW); //RESET信号をLow
   delay(100);
@@ -850,6 +849,7 @@ void wifisetup(){
   String passwd = linebuf; 
   Serial.println("Connecting!!");
   /* AT命令　アクセスポイントへの接続 */
+  Serial.println(atout("AT+CWMODE=1"));
   Serial.println(atout("AT+CWJAP_DEF=\""+ssid+"\",\""+passwd+"\""));
   Serial.print("Push Enter key:");
   getstr(linebuf);
