@@ -12,6 +12,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
 #include <ESP8266HTTPClient.h>
+#include <FS.h>
 #include <string>
 
 #define TCP_MSS 1460        //MSS size 1460B
@@ -20,7 +21,9 @@
 ESP8266WiFiMulti WiFiMulti;
 uint8_t buff[BLEN] = { 0 }; //Data buffer
 int wp = 0, rp = 0;         //Ring buffer pointer
-//unsigned int c; 
+
+// Wi-Fi設定保存ファイル
+const char* settings = "/wifi_settings.txt";
 
 /* アクセスポイントへの接続 */
 void ap_connect(String ssid, String pwd){
@@ -34,6 +37,10 @@ void ap_connect(String ssid, String pwd){
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+  File f = SPIFFS.open(settings, "w");
+  f.println(ssid);
+  f.println(pwd);
+  f.close();
 }
 
 /* HTTP Client処理 */
@@ -114,8 +121,24 @@ int split(String data, char delimiter, String *dst){
 
 void setup() {
   String script;
-  Serial.println();
   Serial.begin(921600);
+  WiFi.mode(WIFI_STA);
+  File f = SPIFFS.open(settings, "r");
+  String ssid = f.readStringUntil('\n');
+  String pwd  = f.readStringUntil('\n');
+  f.close();
+  WiFi.begin(ssid.c_str(), pwd.c_str());
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println(""); 
+  Serial.println("WiFi connected");
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+  Serial.println();
   while(Serial.available()){
      Serial.read();
   }
