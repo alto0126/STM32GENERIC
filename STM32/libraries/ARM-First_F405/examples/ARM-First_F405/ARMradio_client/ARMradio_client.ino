@@ -23,12 +23,7 @@
 #include "SdFat.h"  //MicroSDのヘッダファイル
 #include "math.h"
 #include "minimp3.h"
-#include "i2s_dma.h"
-#include "args.h"
-#include "audio_process.h"
-#include "pdm2pcm.h"
 #include <LiquidCrystal.h>
-#include "RTC.h"
 #include <time.h>
 
 const int rs = PA4, en = PB11, d4 = PC13, d5 = PB8, d6 = PB12, d7 = PC7;
@@ -123,6 +118,7 @@ int search(File file, String str){
 /* 音量調整 */
 void volume(int num){
   static int vol = 300;
+  char str[16];
 
   if(num == 'u') {      //音量UP
     delay(100);
@@ -130,8 +126,9 @@ void volume(int num){
     codec_writeReg(0x06, 0x200 | (vol + 10));//左音量設定　+2.5dB
     codec_writeReg(0x07, 0x200 | (vol + 10));//右音量設定
     Serial.println(codec_readReg(0x06));     //設定値読出し
-    lcd.setCursor(13, 1);
-    lcd.print(codec_readReg(0x06));
+    lcd.setCursor(9, 1);
+    sprintf(str,"VOL:%3d", codec_readReg(0x06));
+    lcd.print(str);
   }
   if(num == 'd') {//音量Down
     delay(100);
@@ -139,8 +136,9 @@ void volume(int num){
     codec_writeReg(0x06, 0x200 | (vol - 10));//左音量設定　-2.5dB
     codec_writeReg(0x07, 0x200 | (vol - 10));//右音量設定
     Serial.println(codec_readReg(0x06));     //設定値読出し
-    lcd.setCursor(13, 1);
-    lcd.print(codec_readReg(0x06));
+    lcd.setCursor(9, 1);
+    sprintf(str,"VOL:%3d", codec_readReg(0x06));
+    lcd.print(str);
   }
 }
 
@@ -368,7 +366,9 @@ void netradio(){
   }urllist[]= {
     "http://wbgo.streamguys.net/wbgo128","6",
     "http://ice2.somafm.com/bootliquor-320-mp3","7",
+    "http://icecast.omroep.nl/radio4-bb-mp3","6",
     "http://66.70.187.44:9069/j1","6",
+    "http://18443.live.streamtheworld.com:80/KDFCFM_SC","6",
     "http://mediaserv30.live-streams.nl:8086/stream","12",
     "http://89.16.185.174:8004/stream","13",
     "http://109.123.116.202:8008/mp3","6",
@@ -382,7 +382,7 @@ void netradio(){
 
   codec_reg_setup();            //DAC初期化
   I2S.setBuffer(buf, 8192*2);   //I2Sバッファ初期化 
-  I2S.setsample(44100);         //I2Sサンプリング周波数設定
+  //I2S.setsample(44100);         //I2Sサンプリング周波数設定
   Serial.println("ラジオメニュー");
   Serial.println("++++++++++++++++++++++++");
   Serial.println("音量(u:大きく d:小さく)");
@@ -391,20 +391,22 @@ void netradio(){
   Serial.println("++++++++++++++++++++++++");
 
   while(1){
-  for(int num = 0;num < 14; num++){    
+  for(int num = 0;num < 15; num++){    
     while (!Serial2.available()); //レスポンス待ち
     String res = Serial2.readStringUntil(10);
     Serial.println("Site:" + urllist[num].url);
     strcpy(urlbuf, (urllist[num].url + "   ").c_str());
     String str = "c," + urllist[num].url + "," + urllist[num].wnd;
     Serial2.write(str.c_str());
-    //ラジオ音声データバッファリング：8192×3Byte
-    //while(Serial2.readBytes(uartbuf, ) >= 8192);
-    //Serial.println("Buffer filled");
+    //ラジオ音声データバッファリング：BLEN Byte
+    delay(500);
+    wp = Serial2.readBytes(uartbuf, 8192);
+    delay(500);
+    Serial.printf("Buffer filled:%dByte\n", wp);
     Serial.print(">");
-    wp = 0;
+    wp = 8192;
     rp = 0;
-    int prt = 0;
+    int prt = 0, first = 0;
     while(1){
       if((BLEN - (wp - rp) > FLEN) && ((quant = Serial2.rxbufferhalf()) >= FLEN)){
           Serial2.readBytes((uint8_t*)(uartbuf + (wp % BLEN)), FLEN);
@@ -418,6 +420,10 @@ void netradio(){
         samples = mp3dec_decode_frame(&mp3d, inbuf, 0x600, pcm, &info);//MP3デコード
         frame = info.frame_bytes;
         rp += frame;             //MP3デコード後のフレームバイト数分リングバッファの読出しポインタを更新
+        if(first == 0){
+          I2S.setsample(info.hz);         //I2Sサンプリング周波数設定
+          first = 1;
+        }
         uint32_t d;
         for (int n = 0; n < 1152 * 2; n++) {
           d = (*(uint32_t *)&pcm[n]) << 16;
@@ -432,7 +438,7 @@ void netradio(){
           scrollbuf(urlbuf);          
         }
         if(prt % 100 == 0){
-          Serial.printf("r_p:%d qt:%d ", wp - rp, quant);
+          Serial.printf("DoubleBuffer:%5dB IputBuffer:%4dB ", wp - rp, quant);
           //Serial.printf("frame:%d ", frame); 
           //Serial.printf("Layer:%d\n", info.layer);
           Serial.printf("Sample Rate:%dHz ", info.hz);

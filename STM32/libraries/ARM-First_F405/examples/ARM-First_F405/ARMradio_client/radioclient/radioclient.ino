@@ -12,18 +12,19 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
 #include <ESP8266HTTPClient.h>
-#include <FS.h>
+#include <EEPROM.h>
 #include <string>
 
 #define TCP_MSS 1460        //MSS size 1460B
 #define BLEN (1024*32)      //Data buffer size 32KB
 
+struct CONFIG {
+  char ssid[32];
+  char pwd[32];
+}conf;
 ESP8266WiFiMulti WiFiMulti;
 uint8_t buff[BLEN] = { 0 }; //Data buffer
 int wp = 0, rp = 0;         //Ring buffer pointer
-
-// Wi-Fi設定保存ファイル
-const char* settings = "/wifi_settings.txt";
 
 /* アクセスポイントへの接続 */
 void ap_connect(String ssid, String pwd){
@@ -37,16 +38,16 @@ void ap_connect(String ssid, String pwd){
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
-  File f = SPIFFS.open(settings, "w");
-  f.println(ssid);
-  f.println(pwd);
-  f.close();
+  strcpy(conf.ssid, ssid.c_str());
+  strcpy(conf.pwd, pwd.c_str());
+  EEPROM.put<CONFIG>(0,conf);
+  EEPROM.commit();
 }
 
 /* HTTP Client処理 */
 void client(String url, String wnd){    // url...radio server URL　  wnd...window size
   Serial.println(url);
-  TCP_WND = atoi(wnd.c_str()) * TCP_MSS;
+  TCP_WND = atoi(wnd.c_str()) * TCP_MSS; //Window値計算
   while(1){   
    if ((WiFiMulti.run() == WL_CONNECTED)) {
       WiFiClient client;
@@ -88,8 +89,8 @@ void client(String url, String wnd){    // url...radio server URL　  wnd...wind
             }
             if(Serial.available()){
               if(Serial.read() == 'e'){//終了指示をチェック
-                http.end();
-                return;
+                http.end();          //HTTP転送をクローズ
+                return;              //コマンド解析にリターン  
               }
             }
             delay(1);                //WDT対策
@@ -119,26 +120,29 @@ int split(String data, char delimiter, String *dst){
     return (index + 1);
 }
 
+/* 初期化処理 */
 void setup() {
-  String script;
+  int n;
+  EEPROM.begin(128);
   Serial.begin(921600);
   WiFi.mode(WIFI_STA);
-  File f = SPIFFS.open(settings, "r");
-  String ssid = f.readStringUntil('\n');
-  String pwd  = f.readStringUntil('\n');
-  f.close();
-  WiFi.begin(ssid.c_str(), pwd.c_str());
-  while (WiFi.status() != WL_CONNECTED) {
+  EEPROM.get<CONFIG>(0, conf);
+  WiFi.begin(conf.ssid, conf.pwd);
+  for(n = 0; n < 10; n++){
+    if(WiFi.status() == WL_CONNECTED) break;
     delay(500);
     Serial.print(".");
   }
+  if(n < 10){
+    /* connect 表示　*/
+    Serial.println("WiFi connected");
+    Serial.print("SSID: ");
+    Serial.println(WiFi.SSID());
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+    Serial.println();
+  }
   Serial.println(""); 
-  Serial.println("WiFi connected");
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-  Serial.println();
   while(Serial.available()){
      Serial.read();
   }
@@ -147,6 +151,7 @@ void setup() {
   Serial.setTimeout(1000);
 }
 
+/* コマンドの解析と実行 */
 void loop() {
   String script[3] = {"\0"};
   
