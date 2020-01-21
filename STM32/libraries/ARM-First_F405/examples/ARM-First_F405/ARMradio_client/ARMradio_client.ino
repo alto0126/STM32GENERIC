@@ -16,7 +16,7 @@
 #define MINIMP3_NO_SIMD
 #define MINIMP3_IMPLEMENTATION
 #define FLEN 1024
-#define BLEN (FLEN*30)
+#define BLEN (FLEN*32)
 
 #include <Wire.h>   //I2Cライブラリのヘッダファイル
 #include "I2S.h"    //I2Sライブラリのヘッダファイル
@@ -30,6 +30,7 @@ const int rs = PA4, en = PB11, d4 = PC13, d5 = PB8, d6 = PB12, d7 = PC7;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 String lcddata[2] = {"",""};
 unsigned int rp = 0, wp = 0, quant = 0;
+int starttime;
 
 uint8_t i2c_mem_write(uint8_t reg, uint8_t addr, uint8_t data);
 uint8_t i2c_mem_read(uint8_t count, uint8_t addr, uint8_t reg, uint8_t * buf);
@@ -129,6 +130,7 @@ void volume(int num){
     lcd.setCursor(9, 1);
     sprintf(str,"VOL:%3d", codec_readReg(0x06));
     lcd.print(str);
+    starttime = millis();
   }
   if(num == 'd') {//音量Down
     delay(100);
@@ -139,6 +141,7 @@ void volume(int num){
     lcd.setCursor(9, 1);
     sprintf(str,"VOL:%3d", codec_readReg(0x06));
     lcd.print(str);
+    starttime = millis();
   }
 }
 
@@ -366,7 +369,7 @@ void netradio(){
   }urllist[]= {
     "http://wbgo.streamguys.net/wbgo128","6",
     "http://ice2.somafm.com/bootliquor-320-mp3","7",
-    "http://icecast.omroep.nl/radio4-bb-mp3","6",
+    "http://icecast.omroep.nl/radio4-bb-mp3","7",
     "http://66.70.187.44:9069/j1","6",
     "http://18443.live.streamtheworld.com:80/KDFCFM_SC","6",
     "http://mediaserv30.live-streams.nl:8086/stream","12",
@@ -407,6 +410,7 @@ void netradio(){
     wp = 8192;
     rp = 0;
     int prt = 0, first = 0;
+    starttime = millis();
     while(1){
       if((BLEN - (wp - rp) > FLEN) && ((quant = Serial2.rxbufferhalf()) >= FLEN)){
           Serial2.readBytes((uint8_t*)(uartbuf + (wp % BLEN)), FLEN);
@@ -448,6 +452,12 @@ void netradio(){
           sprintf(strbuf,"B:%5dB BR:%3dK", wp - rp, info.bitrate_kbps);
           lcd.print(strbuf);
         }
+        if(millis()-starttime > 100){//100ms読出しが出来ないときは再接続する
+          Serial2.write('e'); //Client disconnect command
+          num--;
+          break; 
+        }        
+        starttime = millis();
         prt++; 
       }
       if(Serial.available() | (comm = keyin())){ //キー入力のチェック
@@ -678,11 +688,13 @@ void setup() {
   pinMode(PB4, OUTPUT);
   pinMode(PC0, INPUT);
   lcd.begin(16, 2);
+  lcdprint("Audio Jack");
   digitalWrite(PA15, HIGH);
   analogReadResolution(12);
   Serial.begin(115200); //Set USB Serial baudrate
   Serial2.begin(921600, 1); //Set UART2 baudrate & RTS ON
   setRTSpin();  //RTS機能選択
+  lcdprint("Wi-Fi Setup");
   initWiFi();
   bflush();
   Serial.println(commandout(" "));
