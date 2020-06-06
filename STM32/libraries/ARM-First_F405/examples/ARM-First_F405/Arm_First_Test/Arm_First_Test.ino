@@ -30,6 +30,7 @@
 #include "pdm2pcm.h"
 #include "RTC.h"
 #include <time.h>
+#include "stm32_gpio_af.h"
 
 unsigned int rp = 0, wp = 0, quant = 0;
 
@@ -44,7 +45,10 @@ void led_onoff();
 void wave();
 void music_play();
 void mp3music_play();
+void temp_calc();
 void codec_reg_setup();
+void recording(uint8_t ch_setting);
+void miccheck();
 
 I2SClass I2S(SPI2, PB15 /*DIN*/ , PB9 /*LRC*/, PB13 /*SCLK*/, PC6 /*MCLK*/);
 
@@ -66,9 +70,10 @@ void menu(void){
   Serial.println("  (SD /mp3下を再生～320Kbps 16bit)");
   Serial.println("8: LEDテスト(ESCで中止)");
   Serial.println("9: インターネットラジオ");  
-  Serial.println("a: NTP時計");   
-  Serial.println("b: WiFi接続設定");
-  Serial.println("c: ATコマンド実行");
+  Serial.println("a: NTP時計");
+  Serial.println("b: マイクテスト");   
+  Serial.println("c: WiFi接続設定");
+  Serial.println("d: ATコマンド実行");
   Serial.println("----------------------------------");
   Serial.print("No.?:");
   while(!Serial.available());
@@ -84,8 +89,16 @@ void menu(void){
     case '3':Serial.println("ジャイロセンサの値を表示");
       Serial.println("ボードを傾けると値が変化します");
       exfunc1(gyro_calc);break;
-    case '4':
-      recording();
+    case '4': Serial.println("ボイスレコーダ");
+      Serial.print("(Mic1/2..1 Mic3/4..2):");
+      while(!Serial.available());
+      num = Serial.read();
+      Serial.write(num);
+      if(num == '1'){
+        recording(CH_SETTING_M1M2);
+      }else if(num == '2'){
+        recording(CH_SETTING_M3M4);
+      }
       break;
     case '5': Serial.println("サイン波出力");
       wave();
@@ -104,11 +117,14 @@ void menu(void){
       break;    
     case 'a':Serial.println("NTP時計");
       ntpclock();
-      break;    
-    case 'b':Serial.println("WiFi接続設定");
+      break;
+    case 'b':Serial.println("マイクテスト");
+      miccheck();
+      break;        
+    case 'c':Serial.println("WiFi接続設定");
       wifisetup();
       break;
-    case 'c':Serial.println("ATコマンド実行");
+    case 'd':Serial.println("ATコマンド実行");
       esp_flash();
       break;      
   }
@@ -209,19 +225,17 @@ void led_onoff(){
 
 /* サイン波出力　*/
 void wave(){
-  int16_t buf[8192*2];      //DMAリングバッファ
   double frequency;
   double amplitude = 30000;
+  char buf[8];
   int16_t buff[4410*2];
-  char inbuf[8];
-  
-  codec_reg_setup();        //DACの初期化
+  I2S.begin(I2S_PHILIPS_MODE, 44100, 32);
   I2S.setsample(44100);
-  I2S.setBuffer(buf, 8192*2);    //DMAバッファの設定
+  codec_reg_setup();
   while(1){
     Serial.print("Frequency:");
-    getstr(inbuf);
-    frequency = (double)atoi(inbuf);
+    getstr(buf);
+    frequency = (double)atoi(buf);
     if(frequency == 0) break;
     for (int n = 0; n < 4410*2; n++) {
         buff[n] = (sin(2 * PI * frequency * n / 44100)) * amplitude;
@@ -237,6 +251,8 @@ void wave(){
     }
     Serial.read();
   }
+  I2S.deinitdma();
+  FinishAudioProcess();
 }
 
 /* 文字検索　*/
@@ -276,6 +292,7 @@ void music_play(){
   char path[30];            //フォルダ名（wav）
   char fname[100][50];      //ファイル名リスト
   int count, num, fcount;
+  I2S.begin(I2S_PHILIPS_MODE, 44100, 32);
   SdFatSdio sd;             //sdioオブジェクト生成
   codec_reg_setup();        //DACの初期化
   sd.begin();               //sdカードの初期化
@@ -353,6 +370,8 @@ void music_play(){
                   break;
                 }else if(num == 'e'){           //終了
                   file.close();
+                  I2S.deinitdma();
+                  FinishAudioProcess();
                   return;
                 }
                 Serial.print(">");
@@ -373,6 +392,7 @@ void mp3music_play(){
   mp3dec_t mp3d;                   //MP3デコーダ構造体
   uint8_t fbuf[0x600];             //MP3フレームバッファ
   int count, num, fcount;
+  I2S.begin(I2S_PHILIPS_MODE, 44100, 32);
   SdFatSdio sd;
   codec_reg_setup();
   sd.begin();
@@ -440,6 +460,8 @@ void mp3music_play(){
           break;
         }else if(num == 'e'){
           file.close();
+          I2S.deinitdma();
+          FinishAudioProcess();
           return;
         }
         Serial.print(">");
@@ -475,9 +497,11 @@ void netradio(){
     {"ice1.somafm.com","/illstreet-128-mp3",80},
     {"ice1.somafm.com","/secretagent-128-mp3",80},
     {"ice1.somafm.com","/bootliquor-128-mp3",80},
+    {"tokyofmworld.leanstream.co","/JOAUFM-MP3",80},
   };
 
   Serial.begin(115200);
+  I2S.begin(I2S_PHILIPS_MODE, 44100, 32);
   codec_reg_setup();            //DAC初期化
   setRTSpin();                  //RTS機能選択
   I2S.setBuffer(buf, 8192*2);   //I2Sバッファ初期化 
@@ -489,7 +513,7 @@ void netradio(){
   Serial.println("終了(e:終了)");
   Serial.println("++++++++++++++++++++++++");
   
-  for(int num = 0;num < 7; num++){
+  for(int num = 0;num < 8; num++){
     initWiFi();                 //WiFi初期化
     Serial.println("Site:" + urllist[num].host + urllist[num].file);
     atout("AT+CWMODE=1");       //WiFiをStationモードに設定
@@ -502,7 +526,8 @@ void netradio(){
     Serial2.println(str);
     Serial.print(">");
     //ラジオ音声データバッファリング：8192×3Byte
-    wp = Serial2.readBytes(uartbuf,8192*3);
+    Serial2.readBytes(uartbuf,8192*3);
+    wp = 8192*3;
     rp = 0;
     while(1){
       if((quant = Serial2.rxbufferhalf()) > 4096){ //UART受信バッファが4096byte以上ならリングバッファに書き込む
@@ -541,11 +566,13 @@ void netradio(){
           num -= 2;
           break;
         }else if(comm == 'e'){
-                 Serial2.print("+++");
-                 return;
-              }
-              Serial.print(">");
-        }          
+          Serial2.print("+++");
+          I2S.deinitdma();
+          FinishAudioProcess();
+          return;
+        }
+        Serial.print(">");
+      }          
     }
     Serial2.begin(921600, 0);   
     Serial2.print("+++");
@@ -590,7 +617,8 @@ void clockcount(){
   Serial.printf("%4d/%02d/%02d(%s) %02d:%02d:%02d\n", 1900+stime.tm_year,stime.tm_mon+1,stime.tm_mday+1,day[stime.tm_wday],stime.tm_hour,stime.tm_min,stime.tm_sec);
 }
 
-void recording(void){
+#if 1
+void recording(uint8_t ch_setting){
   uint8_t wav_header[WAV_HEADER_SIZE] = {
   0x52, 0x49, 0x46, 0x46, /* RIFF */
   0x00, 0x00, 0x00, 0x00, /* ファイルサイズ - 8 */
@@ -608,8 +636,9 @@ void recording(void){
   uint32_t rec_period_cnt;
   uint32_t wav_buff_cnt;
   uint8_t end_req;
-  int16_t pcm_buff[PCM_BUFF_LEN];
-
+  int16_t pcm_buff[PCM_BUFF_PERIOD*AUDIO_ST_BUFF_LEN];  /* 200*48000/1000*1*2 = 19200 */
+  int data[4];
+  
   digitalWrite(PA15, LOW);  // turn the YELLOW LED off
   digitalWrite(PB4, LOW);   // turn the BLUE LED off
   SdFatSdio sd;
@@ -622,13 +651,18 @@ void recording(void){
 
   File file;
   setpcmbuf(pcm_buff);
-  file = sd.open("/wav/rec_m1m2.wav", (O_WRITE | O_CREAT | O_TRUNC));
+  if(ch_setting == CH_SETTING_M1M2){
+    file = sd.open("/wav/rec_m1m2.wav", (O_WRITE | O_CREAT | O_TRUNC));
+  }
+  else{
+    file = sd.open("/wav/rec_m3m4.wav", (O_WRITE | O_CREAT | O_TRUNC));
+  }
   if(file){
     Serial.println("'e'押下もしくは10分間の録音で終了します。");
 
     file.write(wav_header, WAV_HEADER_SIZE);
 
-    StartAudioProcess();
+    StartAudioProcess(ch_setting);
 
     total_wr_size = 0;
     rec_period_cnt = 0;
@@ -644,14 +678,12 @@ void recording(void){
       if(pcm_buff_state == PCM_BUFF_STATE_HALFCPLT){
         digitalWrite(PA15, HIGH); // turn the YELLOW LED on
         digitalWrite(PB4, LOW);   // turn the BLUE LED off
-
         file.write(&pcm_buff[0], (PCM_BUFF_PERIOD/2*AUDIO_ST_BUFF_LEN)*2);
         pcm_buff_state = PCM_BUFF_STATE_NOTCPLT;
       }
       else if(pcm_buff_state == PCM_BUFF_STATE_CPLT){
         digitalWrite(PA15, LOW);  // turn the YELLOW LED off
         digitalWrite(PB4, HIGH);  // turn the BLUE LED on
-
         file.write(&pcm_buff[PCM_BUFF_PERIOD/2*AUDIO_ST_BUFF_LEN], (PCM_BUFF_PERIOD/2*AUDIO_ST_BUFF_LEN)*2);
         pcm_buff_state = PCM_BUFF_STATE_NOTCPLT;
         rec_period_cnt++;
@@ -660,9 +692,6 @@ void recording(void){
         ;
       }
     }
-
-    FinishAudioProcess();
-
     digitalWrite(PA15, HIGH); // turn the YELLOW LED on
     digitalWrite(PB4, HIGH);  // turn the BLUE LED on
 
@@ -676,6 +705,7 @@ void recording(void){
     file.close();
     Serial.printf("録音時間: %dsec\n", (rec_period_cnt*PCM_BUFF_PERIOD*AUDIO_PROCESS_PERIOD/1000));
 
+    MX_DMA_DeInit();
     digitalWrite(PA15, LOW); // turn the YELLOW LED off
     digitalWrite(PB4, LOW);  // turn the BLUE LED off
   }
@@ -683,6 +713,61 @@ void recording(void){
     Serial.println("ファイルを生成できません。");
   }
 }
+#endif
+#if 1
+char *levelm(char *lv, int amp){
+  int n;
+  strcpy(lv,"");
+  for(n = 0;n < amp && n < 10; n++){
+    lv[n] = '>';
+  }
+  lv[n] = '\0';
+  return lv;
+}
+
+void miccheck(){
+  int16_t pcm_buff[PCM_BUFF_PERIOD*AUDIO_ST_BUFF_LEN];  /* 200*48000/1000*1*2 = 19200 */
+  int data[4];
+  char lv[11];
+  SdFatSdio sd;
+  setpcmbuf(pcm_buff);
+  codec_writeReg(0x02, 0x00);
+  Serial.println("'e'押下で終了します。");
+  stm32AfSDIO4BitInit(SDIO, NULL, 0, NULL, 0,NULL, 0, NULL, 0, NULL, 0, NULL, 0); 
+  StartAudioProcess(CH_SETTING_M);
+  delay(100);
+  while(1){
+    if(Serial.available()){
+      if(Serial.read() == 'e'){
+        break;
+      }
+    }
+    amplitude(data);
+    Serial.printf("M1:%-10s ",levelm(lv,data[0]/8));
+    Serial.printf("M2:%-10s ",levelm(lv,data[1]/8));
+    Serial.printf("M3:%-10s ",levelm(lv,data[2]/8));
+    Serial.printf("M4:%-10s\r",levelm(lv,data[3]/8));
+    delay(100);
+  }
+  MX_DMA_DeInit();
+}
+
+void temp_calc(){
+  static int tmp_s = 0, measure_count = 0;
+  int tmp;
+  uint8_t buf[2];
+  
+  i2c_mem_write(0x30, 107, 0x10);
+  i2c_mem_read(2, 107, 0x20, buf);
+  tmp_s += (buf[1]*256+buf[0])/128;
+  measure_count += 1;
+  if(measure_count == 5){
+    Serial.printf("TEMP:%2d℃\n", tmp_s/5);
+    measure_count = 0;
+    tmp_s = 0;    
+  }
+}
+#endif
 
 /* AT命令出力 */
 String atout(String data) {
@@ -711,13 +796,13 @@ void setRTSpin(){
 }
 
 void initWiFi(){
-    pinMode(PB1, OUTPUT);   //RESET信号を出力設定
-    digitalWrite(PB1, LOW); //RESET信号をLow
+    pinMode(PB1, OUTPUT);
+    digitalWrite(PB1, LOW);
     delay(100);
-    digitalWrite(PB1, HIGH);//RESET信号をHigh
-    for(int n = 0; n < 5; n++){ //初期化処理の終了待ち
+    digitalWrite(PB1, HIGH);
+    for(int n = 0; n < 5; n++){
        Serial.print("*");
-      delay(1000);
+       delay(1000);
     }
     Serial.println();
     Serial2.begin(115200);
@@ -742,14 +827,9 @@ void wifisetup(){
   digitalWrite(PB1, HIGH);//RESET信号をHigh
   for(int n = 0; n < 5; n++){ //初期化処理の終了待ち
      Serial.print("*");
-    delay(1000);
+     delay(1000);
   }
   Serial.println();
-  Serial2.begin(115200);
-  delay(100);
-  while(Serial2.available()){
-    Serial2.read();
-  }
   Serial2.begin(115200);
   Serial.print("SSID?:"); 
   getstr(linebuf);        //SSID入力
@@ -759,7 +839,6 @@ void wifisetup(){
   String passwd = linebuf; 
   Serial.println("Connecting!!");
   /* AT命令　アクセスポイントへの接続 */
-  Serial.println(atout("AT+CWMODE=1"));
   Serial.println(atout("AT+CWJAP_DEF=\""+ssid+"\",\""+passwd+"\""));
   Serial.print("Push Enter key:");
   getstr(linebuf);
@@ -875,7 +954,7 @@ void setup() {
   pinMode(PB4, OUTPUT);
   Serial.begin(115200);
   Wire.begin(); // start the I2C driver for codec register setup 
-  I2S.begin(I2S_PHILIPS_MODE, 44100, 32);
+  //I2S.begin(I2S_PHILIPS_MODE, 48000, 32);
   RTC_Init();                   //RTC初期化
   SdFile::dateTimeCallback(dateTime);
 }
